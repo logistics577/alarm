@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALARUM — Protected Repeating Alarm</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+--bg: #0a0a0f;
+--surface: #12121a;
+--card: #1a1a26;
+--border: #2a2a3d;
+--accent: #ff4d6d;
+--accent2: #ff8c42;
+--text: #e8e8f0;
+--muted: #6b6b8a;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+background: var(--bg);
+color: var(--text);
+font-family: 'DM Sans', sans-serif;
+min-height: 100vh;
+padding-bottom: 80px;
+}
+.container { max-width: 540px; margin: 0 auto; padding: 1rem; }
+
+.header { text-align: center; margin: 1.5rem 0; }
+.brand { font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem; letter-spacing: 6px; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.brand-sub { font-size: 0.75rem; letter-spacing: 3px; color: var(--muted); }
+
+.live-clock { text-align: center; margin: 1.5rem 0; }
+.clock-display { font-family: 'Share Tech Mono', monospace; font-size: 3.2rem; letter-spacing: 3px; }
+.clock-ampm { font-size: 1.2rem; color: var(--accent); }
+
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1.4rem; margin-bottom: 1rem; }
+.section-label { font-size: 0.7rem; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; margin: 1.2rem 0 0.8rem; font-weight: 600; }
+
+.time-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; }
+.hour-input, .min-input {
+flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+padding: 0.8rem; color: var(--text); font-family: 'Share Tech Mono', monospace;
+font-size: 2rem; text-align: center;
+}
+.time-colon { font-size: 2rem; color: var(--muted); }
+
+.ampm-toggle { display: flex; flex-direction: column; gap: 0.3rem; }
+.ampm-btn {
+background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+padding: 0.4rem 0.8rem; font-size: 0.9rem; cursor: pointer;
+}
+.ampm-btn.active { background: rgba(255,77,109,0.2); border-color: var(--accent); color: var(--accent); }
+
+.ringtone-grid {
+display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin: 1rem 0;
+}
+.ringtone-btn {
+background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+padding: 0.9rem 0.4rem; text-align: center; cursor: pointer; font-size: 0.75rem;
+}
+.ringtone-btn.active {
+border-color: var(--accent); background: rgba(255,77,109,0.15); box-shadow: 0 0 0 3px rgba(255,77,109,0.2);
+}
+.ringtone-btn .icon { font-size: 1.6rem; margin-bottom: 6px; display: block; }
+
+.days-row {
+display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0;
+}
+.day-btn {
+flex: 1; min-width: 40px; background: var(--surface); border: 1px solid var(--border);
+border-radius: 8px; padding: 0.6rem 0.2rem; text-align: center; font-size: 0.75rem; cursor: pointer;
+}
+.day-btn.active { background: rgba(255,77,109,0.2); border-color: var(--accent); color: var(--accent); }
+
+.slider-row { margin: 1.2rem 0; }
+.slider-label-row { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem; }
+.slider-val { font-family: 'Share Tech Mono', monospace; color: var(--accent); }
+
+.add-btn {
+width: 100%; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none;
+border-radius: 14px; padding: 1.1rem; color: white; font-family: 'Bebas Neue', sans-serif;
+font-size: 1.25rem; letter-spacing: 2px; cursor: pointer; margin-top: 1rem;
+}
+
+.alarm-modal {
+position: fixed; inset: 0; background: rgba(10,10,15,0.98); z-index: 9999;
+display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);
+}
+.alarm-modal.hidden { display: none; }
+.modal-inner { text-align: center; padding: 2rem; max-width: 360px; width: 90%; }
+.modal-pulse { font-size: 4.5rem; margin-bottom: 1rem; animation: pulse 1s infinite; }
+.modal-time { font-size: 3.8rem; font-family: 'Bebas Neue', sans-serif; letter-spacing: 4px; }
+.modal-message { margin: 1.2rem 0; font-size: 1.2rem; color: #ff4d6d; font-weight: bold; }
+
+.pin-modal {
+position: fixed; inset: 0; background: rgba(10,10,15,0.98); z-index: 10000;
+display: flex; align-items: center; justify-content: center;
+}
+.pin-box {
+background: var(--card); padding: 2rem; border-radius: 16px; width: 90%; max-width: 320px; text-align: center;
+}
+.pin-input {
+width: 100%; padding: 1rem; font-size: 1.8rem; text-align: center; letter-spacing: 8px;
+background: var(--surface); border: 2px solid var(--accent); border-radius: 12px; color: var(--text); margin: 1rem 0;
+}
+
+@keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.12);} }
+</style>
+</head>
+<body>
+<div class="container" id="mainApp" style="display:none">
+
+  <div class="header">
+    <div class="brand">ALARUM</div>
+    <div class="brand-sub">Protected Repeating Alarm</div>
+  </div>
+
+  <div class="live-clock">
+    <div class="clock-display"><span id="liveClock">10:38:01</span><span class="clock-ampm" id="liveAMPM">PM</span></div>
+    <div class="clock-date" id="liveDate">THURSDAY APR 2 2026</div>
+  </div>
+
+  <div class="card">
+    <div class="section-label">🚨 Repeating Alarm (50s ON → 10s OFF)</div>
+
+    <!-- Start Time -->
+    <div class="section-label">Start Time</div>
+    <div class="time-row">
+      <div class="spinbox">
+        <button class="spin-btn" onclick="spinStartHour(1)">▲</button>
+        <input type="number" class="hour-input" id="startHour" value="10">
+        <button class="spin-btn" onclick="spinStartHour(-1)">▼</button>
+      </div>
+      <div class="time-colon">:</div>
+      <div class="spinbox">
+        <button class="spin-btn" onclick="spinStartMin(1)">▲</button>
+        <input type="number" class="min-input" id="startMin" value="38">
+        <button class="spin-btn" onclick="spinStartMin(-1)">▼</button>
+      </div>
+      <div class="ampm-toggle">
+        <button class="ampm-btn active" id="startPM" onclick="setStartAMPM('PM')">PM</button>
+        <button class="ampm-btn" id="startAM" onclick="setStartAMPM('AM')">AM</button>
+      </div>
+    </div>
+
+    <!-- End Time -->
+    <div class="section-label">End Time</div>
+    <div class="time-row">
+      <div class="spinbox">
+        <button class="spin-btn" onclick="spinEndHour(1)">▲</button>
+        <input type="number" class="hour-input" id="endHour" value="11">
+        <button class="spin-btn" onclick="spinEndHour(-1)">▼</button>
+      </div>
+      <div class="time-colon">:</div>
+      <div class="spinbox">
+        <button class="spin-btn" onclick="spinEndMin(1)">▲</button>
+        <input type="number" class="min-input" id="endMin" value="30">
+        <button class="spin-btn" onclick="spinEndMin(-1)">▼</button>
+      </div>
+      <div class="ampm-toggle">
+        <button class="ampm-btn active" id="endPM" onclick="setEndAMPM('PM')">PM</button>
+        <button class="ampm-btn" id="endAM" onclick="setEndAMPM('AM')">AM</button>
+      </div>
+    </div>
+
+    <textarea id="alarmMsg" rows="2" style="width:100%; margin:1rem 0; padding:12px; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text);">🚨 WAKE UP ALARM</textarea>
+
+    <!-- Sounds -->
+    <div class="section-label">🎵 Choose Sound</div>
+    <div class="ringtone-grid" id="ringtoneGrid">
+      <button class="ringtone-btn" data-tone="beep" onclick="selectTone(this)"><span class="icon">🔔</span>Classic Beep</button>
+      <button class="ringtone-btn" data-tone="digital" onclick="selectTone(this)"><span class="icon">📟</span>Digital</button>
+      <button class="ringtone-btn active" data-tone="siren" onclick="selectTone(this)"><span class="icon">🚨</span>Siren</button>
+      <button class="ringtone-btn" data-tone="bell" onclick="selectTone(this)"><span class="icon">🛎️</span>Bell</button>
+      <button class="ringtone-btn" data-tone="chime" onclick="selectTone(this)"><span class="icon">🎶</span>Chime</button>
+      <button class="ringtone-btn" data-tone="buzzer" onclick="selectTone(this)"><span class="icon">📣</span>Buzzer</button>
+      <button class="ringtone-btn" data-tone="gentle" onclick="selectTone(this)"><span class="icon">🌅</span>Gentle</button>
+      <button class="ringtone-btn" data-tone="pulse" onclick="selectTone(this)"><span class="icon">💓</span>Pulse</button>
+      <button class="ringtone-btn" data-tone="radar" onclick="selectTone(this)"><span class="icon">📡</span>Radar</button>
+      <button class="ringtone-btn" data-tone="retro" onclick="selectTone(this)"><span class="icon">👾</span>Retro</button>
+      <button class="ringtone-btn" data-tone="piano" onclick="selectTone(this)"><span class="icon">🎹</span>Piano</button>
+      <button class="ringtone-btn" data-tone="xylophone" onclick="selectTone(this)"><span class="icon">🎵</span>Xylophone</button>
+    </div>
+
+    <!-- Days -->
+    <div class="section-label">🔁 Repeat On Days</div>
+    <div class="days-row" id="daysRow">
+      <button class="day-btn" data-day="0" onclick="toggleDay(this)">Sun</button>
+      <button class="day-btn" data-day="1" onclick="toggleDay(this)">Mon</button>
+      <button class="day-btn" data-day="2" onclick="toggleDay(this)">Tue</button>
+      <button class="day-btn" data-day="3" onclick="toggleDay(this)">Wed</button>
+      <button class="day-btn" data-day="4" onclick="toggleDay(this)">Thu</button>
+      <button class="day-btn" data-day="5" onclick="toggleDay(this)">Fri</button>
+      <button class="day-btn" data-day="6" onclick="toggleDay(this)">Sat</button>
+    </div>
+
+    <button class="add-btn" onclick="addAlarm()">🚨 ACTIVATE REPEATING ALARM</button>
+  </div>
+
+  <div class="card">
+    <div class="section-label">Active Alarms</div>
+    <div id="alarmList"></div>
+  </div>
+</div>
+
+<!-- PIN Login Modal -->
+<div class="pin-modal" id="pinModal">
+  <div class="pin-box">
+    <h2>Enter 4-Digit PIN</h2>
+    <input type="password" id="pinInput" class="pin-input" maxlength="4" placeholder="••••" onkeypress="if(event.key==='Enter') verifyPin()">
+    <button onclick="verifyPin()" style="width:100%; padding:1rem; background:var(--accent); color:white; border:none; border-radius:12px; font-size:1.1rem;">Unlock Alarum</button>
+  </div>
+</div>
+
+<!-- Alarm Modal -->
+<div class="alarm-modal hidden" id="alarmModal">
+  <div class="modal-inner">
+    <div class="modal-pulse">🚨</div>
+    <div class="modal-time" id="modalTime">10:38</div>
+    <div class="modal-ampm" id="modalAMPM">PM</div>
+    <div class="modal-message" id="modalMessage">ALARM RINGING</div>
+    <button onclick="dismissAlarm()" style="background:#ff4d6d;color:white;width:100%;padding:1.2rem;border:none;border-radius:14px;font-size:1.25rem;margin-top:1rem;">
+      ✓ DISMISS ALARM
+    </button>
+  </div>
+</div>
+
+<script>
+// ====================== PIN PROTECTION ======================
+let userPin = null;
+
+function showPinModal() {
+  document.getElementById('pinModal').style.display = 'flex';
+  document.getElementById('mainApp').style.display = 'none';
+}
+
+function verifyPin() {
+  const entered = document.getElementById('pinInput').value.trim();
+  if (entered.length !== 4 || isNaN(entered)) {
+    alert("Please enter 4 digits");
+    return;
+  }
+
+  if (!userPin) {
+    // First time - set PIN
+    userPin = entered;
+    localStorage.setItem('alarum_pin', entered);
+    alert("PIN set successfully!");
+  } else if (entered === userPin) {
+    // Correct PIN
+    document.getElementById('pinModal').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    loadAlarms();
+  } else {
+    alert("Wrong PIN! Try again.");
+    document.getElementById('pinInput').value = '';
+  }
+}
+
+// ====================== LOCAL STORAGE ======================
+function saveAlarms() {
+  localStorage.setItem('alarum_alarms', JSON.stringify(alarms));
+}
+
+function loadAlarms() {
+  const saved = localStorage.getItem('alarum_alarms');
+  if (saved) {
+    alarms = JSON.parse(saved);
+  }
+  renderAlarms();
+}
+
+// Clear alarms on Saturday
+function checkSaturdayClear() {
+  const now = new Date();
+  if (now.getDay() === 6) { // Saturday
+    if (confirm("Today is Saturday. Do you want to clear all saved alarms?")) {
+      alarms = [];
+      localStorage.removeItem('alarum_alarms');
+      renderAlarms();
+    }
+  }
+}
+
+// ====================== STATE ======================
+let alarms = [];
+let selectedTone = 'siren';
+let selectedDays = [];
+let audioCtx = null;
+let ringtoneInterval = null;
+
+// ====================== AUDIO ======================
+function getCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playRealAlarmSequence(volume = 0.95, durationSec = 1200) {
+  clearInterval(ringtoneInterval);
+  const ctx = getCtx();
+  let elapsed = 0;
+
+  function playSequence() {
+    const o1 = ctx.createOscillator();
+    const g1 = ctx.createGain();
+    o1.type = 'sawtooth';
+    o1.frequency.setValueAtTime(280, ctx.currentTime);
+    o1.frequency.linearRampToValueAtTime(980, ctx.currentTime + 3);
+    g1.gain.setValueAtTime(volume, ctx.currentTime);
+    g1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 3.5);
+    o1.connect(g1); g1.connect(ctx.destination);
+    o1.start(); o1.stop(ctx.currentTime + 3.5);
+
+    setTimeout(() => {
+      for(let i = 0; i < 8; i++) {
+        setTimeout(() => {
+          const o2 = ctx.createOscillator();
+          const g2 = ctx.createGain();
+          o2.type = 'square';
+          o2.frequency.value = 1350;
+          g2.gain.setValueAtTime(volume * 0.9, ctx.currentTime);
+          g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+          o2.connect(g2); g2.connect(ctx.destination);
+          o2.start(); o2.stop(ctx.currentTime + 0.25);
+        }, i * 280);
+      }
+    }, 1000);
+  }
+
+  playSequence();
+  ringtoneInterval = setInterval(() => {
+    elapsed += 4;
+    if (elapsed >= durationSec) {
+      clearInterval(ringtoneInterval);
+      return;
+    }
+    playSequence();
+  }, 4200);
+}
+
+// Clock + Saturday check
+function updateClock() {
+  const now = new Date();
+  let h = now.getHours();
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  document.getElementById('liveClock').textContent = `${String(h).padStart(2,'0')}:${m}:${s}`;
+  document.getElementById('liveAMPM').textContent = ampm;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ====================== TIME CONTROLS ======================
+function setStartAMPM(val) {
+  document.getElementById('startAM').classList.toggle('active', val==='AM');
+  document.getElementById('startPM').classList.toggle('active', val==='PM');
+}
+function setEndAMPM(val) {
+  document.getElementById('endAM').classList.toggle('active', val==='AM');
+  document.getElementById('endPM').classList.toggle('active', val==='PM');
+}
+
+function spinStartHour(dir) { /* same as before */ 
+  const inp = document.getElementById('startHour');
+  let v = parseInt(inp.value) + dir;
+  if (v > 12) v = 1; if (v < 1) v = 12;
+  inp.value = v;
+}
+function spinStartMin(dir) {
+  const inp = document.getElementById('startMin');
+  let v = parseInt(inp.value) + dir;
+  if (v > 59) v = 0; if (v < 0) v = 59;
+  inp.value = v;
+}
+function spinEndHour(dir) {
+  const inp = document.getElementById('endHour');
+  let v = parseInt(inp.value) + dir;
+  if (v > 12) v = 1; if (v < 1) v = 12;
+  inp.value = v;
+}
+function spinEndMin(dir) {
+  const inp = document.getElementById('endMin');
+  let v = parseInt(inp.value) + dir;
+  if (v > 59) v = 0; if (v < 0) v = 59;
+  inp.value = v;
+}
+
+function selectTone(btn) {
+  document.querySelectorAll('.ringtone-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedTone = btn.dataset.tone;
+}
+
+function toggleDay(btn) {
+  btn.classList.toggle('active');
+  const day = parseInt(btn.dataset.day);
+  if (selectedDays.includes(day)) selectedDays = selectedDays.filter(d => d !== day);
+  else selectedDays.push(day);
+}
+
+// ====================== ADD ALARM ======================
+function addAlarm() {
+  const startHour = document.getElementById('startHour').value;
+  const startMin = document.getElementById('startMin').value;
+  const endHour = document.getElementById('endHour').value;
+  const endMin = document.getElementById('endMin').value;
+
+  const rangeFrom = to24h(startHour, startMin, document.getElementById('startPM').classList.contains('active') ? 'PM' : 'AM');
+  const rangeTo = to24h(endHour, endMin, document.getElementById('endPM').classList.contains('active') ? 'PM' : 'AM');
+
+  const alarm = {
+    id: Date.now(),
+    message: document.getElementById('alarmMsg').value.trim() || "🚨 ALARM",
+    tone: selectedTone,
+    volume: 95,
+    durationSec: 1200,
+    enabled: true,
+    firedThisMinute: false,
+    isRange: true,
+    rangeFrom: rangeFrom,
+    rangeTo: rangeTo,
+    rangeInterval: 1,
+    days: [...selectedDays]
+  };
+
+  alarms.push(alarm);
+  saveAlarms();
+  renderAlarms();
+}
+
+// Time conversion functions
+function to24h(hour, min, ampm) {
+  hour = parseInt(hour);
+  if (ampm === 'PM' && hour !== 12) hour += 12;
+  if (ampm === 'AM' && hour === 12) hour = 0;
+  return `${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
+}
+
+function to12h(time24) {
+  let [h, m] = time24.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return { display: `${h}:${String(m).padStart(2,'0')}`, ampm };
+}
+
+// Alarm check and fire functions (same as previous version)
+function checkAlarms() {
+  const now = new Date();
+  const currentTime = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const currentDay = now.getDay();
+  const currentSec = now.getSeconds();
+
+  alarms.forEach(alarm => {
+    if (!alarm.enabled || alarm.firedThisMinute) return;
+    const dayMatch = alarm.days.length === 0 || alarm.days.includes(currentDay);
+    if (!dayMatch) return;
+
+    if (isTimeInRange(currentTime, alarm.rangeFrom, alarm.rangeTo)) {
+      const [rh, rm] = alarm.rangeFrom.split(':').map(Number);
+      const [ch, cm] = currentTime.split(':').map(Number);
+      const totalMin = (ch*60 + cm) - (rh*60 + rm);
+
+      if (totalMin >= 0 && totalMin % alarm.rangeInterval === 0 && currentSec < 12) {
+        alarm.firedThisMinute = true;
+        saveAlarms();
+        fireAlarm(alarm);
+      }
+    }
+  });
+}
+setInterval(checkAlarms, 1000);
+
+function isTimeInRange(time, from, to) {
+  const t2m = t => { const [h,m] = t.split(':').map(Number); return h*60 + m; };
+  return t2m(time) >= t2m(from) && t2m(time) <= t2m(to);
+}
+
+function fireAlarm(alarm) {
+  const modal = document.getElementById('alarmModal');
+  modal.classList.remove('hidden');
+
+  const t12 = to12h(alarm.rangeFrom);
+  document.getElementById('modalTime').textContent = t12.display;
+  document.getElementById('modalAMPM').textContent = t12.ampm;
+  document.getElementById('modalMessage').textContent = alarm.message;
+
+  playRealAlarmSequence(alarm.volume / 100, alarm.durationSec);
+}
+
+function dismissAlarm() {
+  clearInterval(ringtoneInterval);
+  document.getElementById('alarmModal').classList.add('hidden');
+  window.location.href = "https://www.google.com";
+}
+
+function saveAlarms() {
+  localStorage.setItem('alarum_alarms', JSON.stringify(alarms));
+}
+
+function renderAlarms() {
+  const list = document.getElementById('alarmList');
+  list.innerHTML = alarms.map(a => `
+    <div class="alarm-item">
+      <strong>${to12h(a.rangeFrom).display} ${to12h(a.rangeFrom).ampm} → ${to12h(a.rangeTo).display} ${to12h(a.rangeTo).ampm}</strong><br>
+      <small>${a.message} • ${a.days.length ? a.days.map(d=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ') : 'Daily'}</small>
+      <button onclick="deleteAlarm(${a.id})" style="float:right;color:#ff4d6d;background:none;border:none;cursor:pointer;">✕</button>
+    </div>
+  `).join('');
+}
+
+function deleteAlarm(id) {
+  alarms = alarms.filter(a => a.id !== id);
+  saveAlarms();
+  renderAlarms();
+}
+
+// ====================== INIT ======================
+window.addEventListener('load', () => {
+  // Check if PIN exists
+  userPin = localStorage.getItem('alarum_pin');
+  if (!userPin) {
+    showPinModal();
+  } else {
+    document.getElementById('pinModal').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    loadAlarms();
+  }
+
+  checkSaturdayClear();
+  updateClock();
+});
+</script>
+</body>
+</html>
